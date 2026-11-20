@@ -1,0 +1,71 @@
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: false   # 실물은 시뮬 시계가 없음
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None
+
+    # ROS Parameters
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link   # LIMO Gazebo: no base_footprint
+    scan_topic: /scan
+    mode: localization
+
+    # if you'd like to start localizing on bringup in a map and pose
+    map_file_name: /home/wego/Documents/team6/limo_team6/real/maps/q1_map   # serialize_map 결과 (.posegraph/.data, 확장자 없이). 지도를 만든 뒤 경로 확인
+    map_start_pose: [0.0, 0.0, 0.0]   # 지도를 만들 때 출발한 자리(x, y, yaw). 로컬라이제이션은 그 자리에서 시작해야 함
+
+    debug_logging: false
+    throttle_scans: 1
+    transform_publish_period: 0.02 #if 0 never publishes odometry
+    map_update_interval: 5.0
+    resolution: 0.05
+    min_laser_range: 0.2   # LIMO lidar range_min
+    max_laser_range: 8.0   # LIMO lidar range_max (sensor.xacro)
+    minimum_time_interval: 0.5
+    transform_timeout: 0.2
+    tf_buffer_duration: 30.
+    stack_size_to_use: 40000000 #// program needs a larger stack size to serialize large maps
+
+    # General Parameters
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_travel_distance: 0.2
+    minimum_travel_heading: 0.2
+    scan_buffer_size: 3
+    scan_buffer_maximum_scan_distance: 10.0
+    link_match_minimum_response_fine: 0.1  
+    link_scan_maximum_distance: 1.5
+    do_loop_closing: true 
+    loop_match_minimum_chain_size: 3
+    loop_match_maximum_variance_coarse: 3.0  
+    loop_match_minimum_response_coarse: 0.5    # (기본 0.35)
+    loop_match_minimum_response_fine: 0.6    # (기본 0.45)
+
+    # Correlation Parameters - Correlation Parameters
+    correlation_search_space_dimension: 0.3    # 매칭 탐색 범위 축소 (기본 0.5)
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1 
+
+    # Correlation Parameters - Loop Closure Parameters
+    loop_search_space_dimension: 8.0
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+    loop_search_maximum_distance: 1.0    # 평행 통로(약 2.2 m 간격)로 잘못 점프 방지 (기본 3.0)
+
+    # Scan Matcher Parameters
+    distance_variance_penalty: 0.02    # 시뮬 odom이 정확 → odom에서 벗어난 매칭에 강한 벌점 (기본 0.5)
+    angle_variance_penalty: 0.05    # (기본 1.0)
+
+    fine_search_angle_offset: 0.00349     
+    coarse_search_angle_offset: 0.175    # (기본 0.349)
+    coarse_angle_resolution: 0.0349        
+    minimum_angle_penalty: 0.05    # (기본 0.9)
+    minimum_distance_penalty: 0.05    # 벌점 하한 (기본 0.5)
+    use_response_expansion: true
+    min_pass_through: 2
+    occupancy_threshold: 0.1

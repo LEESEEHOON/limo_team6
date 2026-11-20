@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+real/maps/
+real/q1_raceline_real.csv
+real/q1_raceline_real.png

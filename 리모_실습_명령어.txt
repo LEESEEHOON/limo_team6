@@ -1,0 +1,118 @@
+[팀6 리모 실습 명령어]
+
+■ 1. 접속 (노트북 터미널)
+ssh wego@172.30.X.X
+→ 처음이면 yes, 메뉴에서 1 (메뉴에서 Ctrl+C 금지)
+→ IP는 리모 화면에서: ip -4 -o a
+
+■ 2. 터미널 열 때마다 (리모, 컨테이너 안도 똑같이)
+export ROS_DOMAIN_ID=6
+export ROS_LOCALHOST_ONLY=0
+
+■ 3-A. LIMO2 PRO 구동 (도커 없음)
+ros2 launch wego teleop_launch.py
+
+안 되면 11/18 방식 (터미널 2개):
+ros2 launch limo_base limo_base_ackerman.launch.py
+ros2 launch limo_base open_ydlidar_launch.py
+
+■ 3-B. LIMO1 구동 (도커)
+우리 컨테이너 있는지 확인:
+sudo docker ps -a
+
+limo_humble_team6 없으면 한 번만 만들기:
+sudo docker run -it \
+  --name limo_humble_team6 \
+  --network host \
+  --privileged \
+  --device=/dev/ttyTHS1:/dev/ttyTHS1 \
+  --device=/dev/ttyUSB0:/dev/ttyUSB0 \
+  -v /dev/bus/usb:/dev/bus/usb \
+  -v /home/agilex/Documents:/home/agilex/Documents \
+  yspark98/limo1_humble:latest \
+  bash
+
+있으면 (터미널마다):
+sudo docker start limo_humble_team6
+sudo docker exec -it limo_humble_team6 bash
+cd /home/agilex/Documents/limo_basic_ws/
+source install/setup.bash
+ros2 launch wego teleop_launch.py
+
+■ 4. 확인 (구동 켜 둔 채 새 터미널, 2번 export 먼저)
+※ LIMO1은 새 터미널도 docker exec로 컨테이너 안에 들어가서
+※ 결과는 사진 찍어서 단톡에 올리기
+
+[빠른 확인] 이 3줄만 하고 문제 없으면 바로 매핑/주행으로
+ros2 topic list
+ros2 topic info /limo/ack_cmd
+ros2 pkg list | grep -E "slam_toolbox|ackermann_msgs"
+→ OK 조건: 목록에 /scan 있음,
+   Subscription count: 1,
+   slam_toolbox, ackermann_msgs 둘 다 나옴
+→ 하나라도 아니면 아래 4-1~4-6에서 해당 항목만 보기
+(TF는 따로 안 봐도 됨: 매핑할 때 지도가 그려지면 TF 정상)
+
+아래는 문제 생겼을 때만 ↓
+
+[4-1] 토픽 목록
+ros2 topic list
+→ /scan 있음: OK
+→ /scan 없음 (PRO): 새 터미널에서 라이다 켜기
+   ros2 launch limo_base open_ydlidar_launch.py
+→ /scan 없음 (LIMO1): 구동 Ctrl+C 후 다시 켜기,
+   그래도 없으면 조교님께
+→ 라이다가 다른 이름이면 (예: /limo/scan) 이름 메모
+
+[4-2] 주행 명령 토픽
+ros2 topic info /limo/ack_cmd
+ros2 topic info /cmd_vel
+→ Subscription count: 1 인 쪽이 리모가 듣는 토픽 → 메모
+→ 둘 다 0이면 구동이 덜 켜진 것 → 다시 켜기
+
+[4-3] 라이다 데이터
+ros2 topic echo /scan --once
+→ 숫자(ranges)가 나오면 OK
+→ 안 나오면 라이다 launch 로그에 에러 있는지 확인
+라이다 좌표계 이름 확인:
+ros2 topic echo /scan --once | grep frame_id
+
+[4-4] 좌표계 (TF) (끄기는 Ctrl+C)
+ros2 run tf2_ros tf2_echo odom base_link
+ros2 run tf2_ros tf2_echo base_link (4-3에서 본 frame_id)
+→ Translation 숫자가 나오면 OK
+→ "does not exist" 계속 나오면 그 연결이 없음
+   → 사진 찍어서 단톡 (코드에서 해결해야 함)
+
+[4-5] 필요한 프로그램 설치돼 있는지
+ros2 pkg list | grep slam_toolbox
+ros2 pkg list | grep ackermann_msgs
+→ 둘 다 나오면 OK
+→ 안 나옴 (LIMO1, 컨테이너 안에서):
+   apt update
+   apt install -y ros-humble-slam-toolbox
+   apt install -y ros-humble-ackermann-msgs
+   (설치 후 위 확인 명령 다시)
+→ 안 나옴 (PRO): 설치하지 말고 조교님께 먼저 물어보기
+   (리모 본체라 허락 필요)
+
+[4-6] teleop으로 움직여 보기 (주변 비우고, 천천히)
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+→ 안 움직이면: LED 녹색인지, 4-2에서 본 토픽이
+   /cmd_vel 인지 확인 (teleop은 /cmd_vel로 보냄)
+
+■ 5. 코드 받기 (리모)
+처음 한 번:
+mkdir -p ~/Documents/team6 && cd ~/Documents/team6
+git clone https://github.com/LEESEEHOON/limo_team6.git
+
+그다음부터:
+cd ~/Documents/team6/limo_team6
+git pull
+
+■ 주의
+- Ackermann 모드: 앞 LED 녹색 (빨간 걸쇠 올려서 30도)
+- 구동/teleop은 한 번에 한 명, 움직이기 전 주변 비우기
+- 리모에서 push 금지, Username 물으면 Ctrl+C
+- 리모 ~/.bashrc 수정 금지, 다른 팀 컨테이너 건드리지 않기
+- 충전 중 로봇 연결 금지, 책상 위에 두지 않기
